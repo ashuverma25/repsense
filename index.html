@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RepSense — Train Smarter. Perfect Every Rep.</title>
+  <meta name="description" content="RepSense is an AI workout coach that uses your camera to monitor exercises, count reps, analyze form, and guide your workout in real time." />
+  <link rel="stylesheet" href="styles/style.css" />
+</head>
+<body>
+
+  <!-- ============================================
+       INTRO VIEW — Premium Diagonal Animation
+       ============================================ -->
+  <div id="intro-view">
+    <!-- Animated words that slide to stacked center layout -->
+    <div class="intro-words-container" id="intro-words-container">
+      <div class="intro-text-rep" id="intro-text-rep">REP</div>
+      <div class="intro-text-sense" id="intro-text-sense">SENSE</div>
+    </div>
+
+    <!-- Tagline (hidden initially) -->
+    <div class="intro-tagline" id="intro-tagline">Train Smarter. Perfect Every Rep.</div>
+
+    <!-- Skip button with countdown -->
+    <button class="intro-skip" id="skip-intro-btn">Skip Intro <span id="skip-countdown"></span></button>
+  </div>
+
+  <!-- ============================================
+       PROFILE VIEW
+       ============================================ -->
+  <div id="profile-view" class="hidden">
+    <div class="profile-card">
+      <h2>Welcome to RepSense</h2>
+      <p>Set up your profile to get started.</p>
+      <form id="profile-form">
+        <div class="form-group">
+          <label for="profile-name">Your Name</label>
+          <input type="text" id="profile-name" placeholder="Enter your name" required />
+        </div>
+        <div class="form-group">
+          <label for="profile-age">Age</label>
+          <input type="number" id="profile-age" placeholder="e.g. 25" min="10" max="99" required />
+        </div>
+        <div class="form-group">
+          <label for="profile-gender">Gender</label>
+          <select id="profile-gender" required>
+            <option value="">Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="profile-fitness">Fitness Level</label>
+          <select id="profile-fitness" required>
+            <option value="">Select level</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary">Get Started</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================
+       PROFILE DRAWER OVERLAY
+       ============================================ -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+
+  <!-- ============================================
+       PROFILE DRAWER
+       ============================================ -->
+  <div class="profile-drawer" id="profile-drawer">
+    <div class="drawer-profile-section">
+      <div class="drawer-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/>
+          <path d="M20 21c0-3.3-3.6-6-8-6s-8 2.7-8 6"/>
+        </svg>
+      </div>
+      <div class="drawer-username" id="drawer-username">User</div>
+      <div class="drawer-meta">
+        <span id="drawer-age">—</span> yrs · <span id="drawer-fitness">—</span>
+      </div>
+      <div class="drawer-score-badge">
+        <span class="drawer-score-label">RepSense Score</span>
+        <span class="drawer-score-value" id="drawer-score">0</span>
+      </div>
+    </div>
+    <nav class="drawer-nav">
+      <a href="#" class="drawer-nav-link active" id="drawer-nav-dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="drawer-nav-link" id="drawer-nav-history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+        Workout History
+      </a>
+      <a href="#" class="drawer-nav-link" id="drawer-nav-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </a>
+    </nav>
+  </div>
+
+  <!-- ============================================
+       DASHBOARD VIEW
+       ============================================ -->
+  <div id="dashboard-view" class="hidden">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="brand-logo">
+        <span class="brand-rep">Rep</span><span class="brand-sense">Sense</span>
+      </div>
+      <button class="profile-icon-btn" id="profile-icon" title="Profile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/>
+          <path d="M20 21c0-3.3-3.6-6-8-6s-8 2.7-8 6"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Insights Cards — 2×2 Grid -->
+    <section class="insights-section">
+      <div class="insights-grid-new">
+        <div class="insight-card-new insight-highlight-new">
+          <div class="insight-card-icon">🏆</div>
+          <div class="insight-card-content">
+            <div class="insight-card-label">RepSense Score</div>
+            <div class="insight-card-value" id="dash-score">0</div>
+            <div class="insight-card-sub">Keep training to improve!</div>
+          </div>
+        </div>
+        <div class="insight-card-new">
+          <div class="insight-card-icon">🔥</div>
+          <div class="insight-card-content">
+            <div class="insight-card-label">Workout Streak</div>
+            <div class="insight-card-value" id="dash-streak">0</div>
+            <div class="insight-card-sub" id="dash-streak-sub">days</div>
+          </div>
+        </div>
+        <div class="insight-card-new">
+          <div class="insight-card-icon">🎯</div>
+          <div class="insight-card-content">
+            <div class="insight-card-label">Form Accuracy</div>
+            <div class="insight-card-value" id="dash-form">—</div>
+            <div class="insight-card-sub">avg form score</div>
+          </div>
+        </div>
+        <div class="insight-card-new">
+          <div class="insight-card-icon">🧭</div>
+          <div class="insight-card-content">
+            <div class="insight-card-label">Guide Trainer</div>
+            <div class="insight-card-value insight-coming-soon">Coming Soon</div>
+            <div class="insight-card-sub">Muscle-specific training guides will appear here in future updates.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two-Column: Calendar + Playlists -->
+    <section class="dashboard-grid">
+      <div class="dash-section">
+        <h3><span class="icon">📅</span> Activity Calendar</h3>
+        <div class="calendar-heatmap" id="calendar-container"></div>
+      </div>
+      <div class="dash-section">
+        <h3><span class="icon">🏋️</span> Workout Playlists</h3>
+        <div class="playlist-actions">
+          <button class="btn-secondary" id="create-playlist-btn">+ New Playlist</button>
+        </div>
+        <div class="playlist-list" id="playlist-list"></div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+      <div class="footer-copy">© RepSense · All Rights Reserved</div>
+      <div class="footer-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Contact</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============================================
+       WORKOUT VIEW
+       ============================================ -->
+  <div id="workout-view" class="hidden">
+    <div class="workout-layout">
+      <!-- Camera Panel -->
+      <div class="camera-panel">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="pose-canvas"></canvas>
+
+        <!-- Overlay: exercise label + controls -->
+        <div class="camera-overlay">
+          <div>
+            <div class="exercise-label" id="workout-exercise-name">—</div>
+            <div class="exercise-status" id="workout-exercise-status">Preparing…</div>
+          </div>
+          <div class="camera-controls">
+            <button class="btn-icon" id="btn-pause-workout" title="Pause">⏸</button>
+            <button class="btn-icon" id="btn-skip-exercise" title="Skip">⏭</button>
+            <button class="btn-icon btn-icon" id="btn-stop-workout" title="Stop" style="border-color:var(--danger);color:var(--danger)">⏹</button>
+          </div>
+        </div>
+
+        <!-- Frame readiness -->
+        <div class="frame-status not-ready" id="frame-status">Stand so your full body is visible</div>
+
+        <!-- Exercise preview overlay -->
+        <div class="exercise-preview-overlay hidden" id="exercise-preview">
+          <h2>NEXT EXERCISE</h2>
+          <div class="exercise-name" id="preview-exercise-name">—</div>
+          <div class="exercise-preview-animation" id="preview-animation">
+            <svg class="stick-figure" viewBox="0 0 100 120" id="preview-svg">
+              <!-- Stick figure drawn via JS -->
+            </svg>
+          </div>
+          <div class="exercise-target" id="preview-target">—</div>
+        </div>
+
+        <!-- Countdown overlay -->
+        <div class="countdown-overlay hidden" id="countdown-overlay">
+          <div class="countdown-number" id="countdown-number">3</div>
+        </div>
+      </div>
+
+      <!-- Side Panel: Metrics + Voice -->
+      <div class="side-panel">
+        <div class="metrics-panel">
+          <h3>Metrics</h3>
+          <div class="metric-item">
+            <span class="metric-label">Reps</span>
+            <span class="metric-value" id="metric-reps">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Target</span>
+            <span class="metric-value" id="metric-target" style="font-size:0.9rem;color:var(--text-secondary)">—</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Depth</span>
+            <span class="metric-value" id="metric-depth">—</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Timer</span>
+            <span class="metric-value" id="metric-timer">00:00</span>
+          </div>
+          <div class="form-bar">
+            <div class="form-bar-label">
+              <span>Form Score</span>
+              <span id="form-score-value">—</span>
+            </div>
+            <div class="form-bar-track">
+              <div class="form-bar-fill" id="form-bar-fill" style="width:0%"></div>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <div class="metric-item">
+              <span class="metric-label">Exercise</span>
+              <span class="metric-value" id="metric-exercise-idx" style="font-size:0.9rem;color:var(--text-secondary)">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-panel">
+          <h3>🎤 AI Coach</h3>
+          <div class="voice-waveform" id="voice-waveform">
+            <!-- Wave bars generated via JS -->
+          </div>
+          <div class="voice-messages" id="voice-messages"></div>
+          <div class="voice-command-hint">Say "Buddy pause/skip/stop"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       REPORT VIEW
+       ============================================ -->
+  <div id="report-view" class="hidden">
+    <div class="report-header">
+      <h1>WORKOUT COMPLETE</h1>
+      <p>Great session! Here's your summary.</p>
+    </div>
+
+    <div class="report-stats">
+      <div class="report-stat">
+        <div class="value" id="report-total-reps">0</div>
+        <div class="label">Total Reps</div>
+      </div>
+      <div class="report-stat">
+        <div class="value" id="report-form-score">—</div>
+        <div class="label">Form Accuracy</div>
+      </div>
+      <div class="report-stat">
+        <div class="value" id="report-duration">00:00</div>
+        <div class="label">Duration</div>
+      </div>
+    </div>
+
+    <div class="report-exercises">
+      <h3>Exercise Breakdown</h3>
+      <div id="report-exercise-list"></div>
+    </div>
+
+    <div class="report-issues" id="report-issues-section">
+      <h3>⚠️ Form Notes</h3>
+      <div id="report-issues-list"></div>
+    </div>
+
+    <div class="report-footer">
+      <div style="margin-bottom:16px;">
+        <span style="color:var(--text-secondary);">RepSense Score:</span>
+        <span style="font-family:var(--font-display);font-size:1.5rem;color:var(--accent);margin-left:8px;" id="report-repsense-score">0</span>
+      </div>
+      <button class="btn-primary" style="max-width:300px;margin:0 auto;" id="report-done-btn">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- ============================================
+       PLAYLIST MODAL
+       ============================================ -->
+  <div class="modal-overlay hidden" id="playlist-modal">
+    <div class="modal-content">
+      <h3 id="modal-title">Create Playlist</h3>
+      <div class="form-group">
+        <label for="modal-playlist-name">Playlist Name</label>
+        <input type="text" id="modal-playlist-name" placeholder="e.g. Morning Workout" />
+      </div>
+      <div class="form-group">
+        <label>Select Exercises</label>
+        <div class="exercise-chips" id="modal-exercise-chips"></div>
+      </div>
+      <div class="form-group">
+        <label for="modal-reps-per-exercise">Reps Per Exercise</label>
+        <input type="number" id="modal-reps-per-exercise" value="12" min="1" max="100" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+        <button class="btn-primary" style="width:auto;padding:12px 24px;" id="modal-save-btn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       SCRIPTS — MediaPipe + App Modules
+       ============================================ -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/poseDetection.js"></script>
+  <script src="js/exerciseEngine.js"></script>
+  <script src="js/repStateMachine.js"></script>
+  <script src="js/formAnalyzer.js"></script>
+  <script src="js/voiceAssistant.js"></script>
+  <script src="js/playlistManager.js"></script>
+  <script src="js/scoringSystem.js"></script>
+  <script src="js/calendarTracker.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
