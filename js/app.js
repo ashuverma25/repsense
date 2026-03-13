@@ -6,8 +6,9 @@ const App = (() => {
   // =========================================
   // STATE
   // =========================================
-  const VIEWS = ['intro-view', 'profile-view', 'dashboard-view', 'workout-view', 'report-view'];
+  const VIEWS = ['intro-view', 'login-view', 'profile-view', 'dashboard-view', 'workout-view', 'report-view'];
   let currentView = null;
+  let sessionActive = false;
   let profile = null;
 
   // Workout state
@@ -28,6 +29,7 @@ const App = (() => {
   // Map each view to its correct CSS display value
   const VIEW_DISPLAY = {
     'intro-view': 'flex',
+    'login-view': 'flex',
     'profile-view': 'flex',
     'dashboard-view': 'block',
     'workout-view': 'block',
@@ -57,9 +59,10 @@ const App = (() => {
 
   function init() {
     profile = loadProfile();
+    sessionActive = localStorage.getItem('repsense_session') === 'true';
 
-    // Skip intro button
-    document.getElementById('skip-intro-btn')?.addEventListener('click', skipIntro);
+    // Login button
+    document.getElementById('google-login-btn')?.addEventListener('click', handleLogin);
 
     // Profile form
     document.getElementById('profile-form')?.addEventListener('submit', handleProfileSubmit);
@@ -97,108 +100,86 @@ const App = (() => {
 
   /**
    * Run the premium diagonal intro animation — smooth, slow, cinematic.
+   * Auto-redirects to login view after animation.
    */
   function runIntroAnimation() {
     const repEl = document.getElementById('intro-text-rep');
     const senseEl = document.getElementById('intro-text-sense');
     const tagline = document.getElementById('intro-tagline');
     const introView = document.getElementById('intro-view');
-    const skipBtn = document.getElementById('skip-intro-btn');
-    const countdownEl = document.getElementById('skip-countdown');
 
     if (!repEl || !senseEl) {
       goToNextAfterIntro();
       return;
     }
 
-    // Step 1: Slide REP from top-left with fade (0ms)
     requestAnimationFrame(() => {
       repEl.classList.add('animate-in');
-
-      // Step 2: Slide SENSE from bottom-right with 200ms stagger
       setTimeout(() => {
         senseEl.classList.add('animate-in');
       }, 200);
     });
 
-    // Step 3: Settle micro-bounce at ~1.5s (both have arrived)
     setTimeout(() => {
       repEl.classList.add('settle');
       senseEl.classList.add('settle');
     }, 1500);
 
-    // Step 4: Subtle glow pulse at ~1.75s
     setTimeout(() => {
       repEl.classList.add('glow-pulse');
       senseEl.classList.add('glow-pulse');
     }, 1750);
 
-    // Step 5: Show tagline at ~2s
     setTimeout(() => {
       tagline.classList.add('visible');
     }, 2000);
 
-    // Step 6: Show skip button + start countdown at ~2.5s
+    // Auto-transition after intro
     setTimeout(() => {
       if (introAnimationDone) return;
-      skipBtn.classList.add('visible');
-      startSkipCountdown(countdownEl, introView);
-    }, 2500);
-  }
-
-  /**
-   * Run the skip countdown: 3 → 2 → 1 → auto-transition.
-   */
-  let countdownInterval = null;
-
-  function startSkipCountdown(countdownEl, introView) {
-    let remaining = 3;
-    countdownEl.textContent = `(${remaining})`;
-
-    countdownInterval = setInterval(() => {
-      remaining--;
-      if (remaining > 0) {
-        countdownEl.textContent = `(${remaining})`;
-      } else {
-        clearInterval(countdownInterval);
-        countdownInterval = null;
-        countdownEl.textContent = '';
-        // Auto-transition
-        if (!introAnimationDone) {
-          introAnimationDone = true;
-          introView.classList.add('intro-fade-out');
-          setTimeout(() => {
-            goToNextAfterIntro();
-          }, 600);
-        }
-      }
-    }, 1000);
-  }
-
-  /**
-   * Skip intro immediately.
-   */
-  function skipIntro() {
-    if (introAnimationDone) return;
-    introAnimationDone = true;
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
-    }
-    const introView = document.getElementById('intro-view');
-    introView.classList.add('intro-fade-out');
-    setTimeout(() => {
-      goToNextAfterIntro();
-    }, 400);
+      introAnimationDone = true;
+      introView.classList.add('intro-fade-out');
+      setTimeout(() => {
+        goToNextAfterIntro();
+      }, 600);
+    }, 3500);
   }
 
   function goToNextAfterIntro() {
+    if (sessionActive) {
+      if (profile) {
+        showView('dashboard-view');
+        refreshDashboard();
+      } else {
+        showView('profile-view');
+      }
+    } else {
+      showView('login-view');
+    }
+  }
+
+  // =========================================
+  // AUTH
+  // =========================================
+  function handleLogin() {
+    // Simulate setting authenticated session
+    localStorage.setItem('repsense_session', 'true');
+    sessionActive = true;
+    
+    // Check flow
     if (profile) {
       showView('dashboard-view');
       refreshDashboard();
     } else {
       showView('profile-view');
     }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('repsense_session');
+    sessionActive = false;
+    currentPlaylist = null;
+    showView('login-view');
   }
 
   // =========================================
@@ -220,10 +201,27 @@ const App = (() => {
     const age = parseInt(document.getElementById('profile-age').value);
     const gender = document.getElementById('profile-gender').value;
     const fitness = document.getElementById('profile-fitness').value;
+    
+    // Optional fields
+    const heightStr = document.getElementById('profile-height')?.value;
+    const weightStr = document.getElementById('profile-weight')?.value;
+    const height = heightStr ? parseInt(heightStr) : null;
+    const weight = weightStr ? parseInt(weightStr) : null;
 
     if (!name || !age || !gender || !fitness) return;
 
-    saveProfile({ name, age, gender, fitness });
+    // Persist any existing photo if rewriting profile
+    const existingPhoto = profile ? profile.photoBase64 : null;
+
+    saveProfile({ 
+      name, 
+      age, 
+      gender, 
+      fitness,
+      height,
+      weight,
+      photoBase64: existingPhoto
+    });
     showView('dashboard-view');
     refreshDashboard();
   }
@@ -235,7 +233,20 @@ const App = (() => {
     if (!profile) return;
 
     // Insight cards
-    document.getElementById('dash-score').textContent = ScoringSystem.getScoreDisplay();
+    const score = ScoringSystem.getScore();
+    const rankInfo = ScoringSystem.getRankInfo(score);
+    
+    document.getElementById('dash-score').textContent = score;
+    
+    // Dash Rank UI
+    const dashRankBadge = document.getElementById('dash-rank-badge');
+    dashRankBadge.textContent = rankInfo.name;
+    dashRankBadge.className = `insight-rank-badge bg-rank-${rankInfo.color}`;
+    
+    document.getElementById('dash-rank-fill').style.width = `${rankInfo.progressPercent}%`;
+    document.getElementById('dash-rank-fill').className = `rank-progress-fill bg-rank-${rankInfo.color}`;
+    document.getElementById('dash-rank-sub').textContent = rankInfo.max === Infinity ? `Max Rank` : `${score} / ${rankInfo.max}`;
+
     document.getElementById('dash-streak').textContent = CalendarTracker.getStreak();
 
     const streak = CalendarTracker.getStreak();
@@ -243,6 +254,10 @@ const App = (() => {
 
     const avgForm = CalendarTracker.getAvgFormScore();
     document.getElementById('dash-form').textContent = avgForm > 0 ? avgForm + '%' : '—';
+    
+    // Total Workouts
+    const totalWorkouts = CalendarTracker.getTotalWorkouts();
+    document.getElementById('dash-workouts-total').textContent = totalWorkouts;
 
     // Calendar & playlists
     CalendarTracker.renderCalendar();
@@ -255,13 +270,50 @@ const App = (() => {
   function refreshDrawer() {
     if (!profile) return;
     const nameEl = document.getElementById('drawer-username');
-    const ageEl = document.getElementById('drawer-age');
-    const fitnessEl = document.getElementById('drawer-fitness');
+    const emailEl = document.getElementById('drawer-email');
     const scoreEl = document.getElementById('drawer-score');
-    if (nameEl) nameEl.textContent = profile.name;
-    if (ageEl) ageEl.textContent = profile.age || '—';
-    if (fitnessEl) fitnessEl.textContent = profile.fitness || '—';
-    if (scoreEl) scoreEl.textContent = ScoringSystem.getScoreDisplay();
+    
+    // Rank element (Badge)
+    const rankBadgeEl = document.getElementById('drawer-rank-badge');
+    
+    // Avatar elements
+    const photoEl = document.getElementById('drawer-photo');
+    const svgEl = document.getElementById('drawer-avatar-svg');
+
+    if (nameEl) nameEl.textContent = profile.name || 'User';
+    if (emailEl) emailEl.textContent = profile.email || 'user@email.com';
+    
+    const streakEl = document.getElementById('drawer-streak');
+    if (streakEl) {
+      const streak = CalendarTracker.getStreak();
+      streakEl.textContent = `${streak} ${streak === 1 ? 'Day' : 'Days'}`;
+    }
+    
+    const score = ScoringSystem.getScore();
+    const rankInfo = ScoringSystem.getRankInfo(score);
+    
+    if (scoreEl) scoreEl.textContent = score;
+    
+    if (rankBadgeEl) {
+      rankBadgeEl.textContent = rankInfo.name;
+      rankBadgeEl.className = `drawer-rank-badge bg-rank-${rankInfo.color}`;
+    }
+    // The original code had rankFillEl and rankSubEl, which are not in the new instruction.
+    // Assuming these are intentionally removed or handled differently by the new rankBadgeEl.
+    // If they were meant to be kept, the instruction was incomplete.
+    // For now, I will remove them as per the provided diff.
+
+    if (photoEl && svgEl) {
+      if (profile.photoBase64) {
+        photoEl.src = profile.photoBase64;
+        photoEl.classList.remove('hidden');
+        svgEl.classList.add('hidden');
+      } else {
+        photoEl.classList.add('hidden');
+        photoEl.src = '';
+        svgEl.classList.remove('hidden');
+      }
+    }
   }
 
   // =========================================
@@ -285,6 +337,66 @@ const App = (() => {
         overlay.classList.remove('open');
       });
     }
+
+    // Photo Upload
+    const photoInput = document.getElementById('photo-upload-input');
+    if (photoInput) {
+      photoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Str = event.target.result;
+          if (profile) {
+            profile.photoBase64 = base64Str;
+            saveProfile(profile);
+            refreshDrawer();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Feedback
+    document.getElementById('drawer-nav-feedback')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.open('https://forms.google.com/your-feedback-form', '_blank');
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+    });
+
+    // Logout
+    document.getElementById('drawer-nav-logout')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+      logoutUser();
+    });
+
+    // Dummy Actions
+    const dummyFeature = (e) => {
+      e.preventDefault();
+      alert("This advanced feature will be unlocked in the v1.0 release.");
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+    };
+    document.getElementById('drawer-nav-analytics')?.addEventListener('click', dummyFeature);
+    document.getElementById('drawer-nav-settings')?.addEventListener('click', dummyFeature);
+    
+    // Legal Routing
+    document.getElementById('footer-link-privacy')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showView('privacy-policy-view');
+    });
+    document.getElementById('footer-link-terms')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      showView('terms-of-use-view');
+    });
+    
+    const backToDash = (e) => { e.preventDefault(); showView('dashboard-view'); };
+    document.getElementById('privacy-back-btn')?.addEventListener('click', backToDash);
+    document.getElementById('terms-back-btn')?.addEventListener('click', backToDash);
   }
 
   /**
@@ -868,22 +980,53 @@ const App = (() => {
         reps: e.reps,
         plankTime: e.plankTime,
         avgFormScore: e.avgFormScore
-      }))
+      })),
+      scoreGained: scoreResult.delta
     });
 
-    // Render report
-    renderReport(totalReps, avgFormScore, duration, scoreResult.newScore, completed);
-    showView('report-view');
+    showReport(totalReps, avgFormScore, Math.floor(duration), scoreResult.newScore, scoreResult.newRankInfo);
+    
+    if (scoreResult.rankUp) {
+      showRankUpNotification(scoreResult.newRankInfo);
+    }
   }
 
-  function renderReport(totalReps, avgFormScore, duration, newScore, completed) {
-    document.getElementById('report-total-reps').textContent = totalReps;
-    document.getElementById('report-form-score').textContent = avgFormScore + '%';
-    document.getElementById('report-duration').textContent = formatTime(duration);
-    document.getElementById('report-repsense-score').textContent = newScore;
+  function showRankUpNotification(rankInfo) {
+    const toast = document.getElementById('rank-up-toast');
+    const nameEl = document.getElementById('toast-rank-name');
+    
+    if (!toast || !nameEl) return;
+    
+    nameEl.textContent = rankInfo.name;
+    nameEl.className = `inset-rank-${rankInfo.color}`;
+    
+    toast.classList.remove('hidden');
+    // slight delay before animating in
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 100);
+    
+    // hide after 5 seconds
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.classList.add('hidden'), 500);
+    }, 5000);
+  }
 
-    // Exercise list
-    const listEl = document.getElementById('report-exercise-list');
+  function showReport(totalReps, formScore, durationMs, finalScore, newRankInfo) {
+    showView('report-view');
+    document.getElementById('report-total-reps').textContent = totalReps;
+    document.getElementById('report-form-score').textContent = formScore + '%';
+    document.getElementById('report-duration').textContent = formatTime(Math.floor(durationMs / 1000)); // Changed formatDuration to formatTime
+    document.getElementById('report-repsense-score').textContent = finalScore;
+    
+    const reportRankBadge = document.getElementById('report-rank-badge');
+    if (reportRankBadge && newRankInfo) {
+      reportRankBadge.textContent = newRankInfo.name;
+      reportRankBadge.className = `insight-rank-badge bg-rank-${newRankInfo.color}`;
+    }
+
+    const listEl = document.getElementById('report-exercise-list'); // Corrected variable name from 'list' to 'listEl'
     listEl.innerHTML = '';
     for (const ex of exerciseResults) {
       const item = document.createElement('div');

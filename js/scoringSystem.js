@@ -5,12 +5,48 @@
 const ScoringSystem = (() => {
   const STORAGE_KEY = 'repsense_score';
 
+  // Rank definitions based on cumulative score
+  const RANKS = [
+    { name: 'Beginner', min: 0, max: 200, color: 'gray' },
+    { name: 'Athlete', min: 201, max: 600, color: 'green' },
+    { name: 'Advanced', min: 601, max: 1200, color: 'blue' },
+    { name: 'Elite', min: 1201, max: 2000, color: 'purple' },
+    { name: 'Master', min: 2001, max: 3500, color: 'gold' },
+    { name: 'Legend', min: 3501, max: Infinity, color: 'red' }
+  ];
+
   /**
    * Get current score.
    */
   function getScore() {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? parseInt(stored, 10) : 0;
+  }
+
+  /**
+   * Get rank information for a given score.
+   * Returns { name, color, min, max, progressPercent }
+   */
+  function getRankInfo(score) {
+    let currentRank = RANKS[0];
+    for (const rank of RANKS) {
+      if (score >= rank.min && score <= rank.max) {
+        currentRank = rank;
+        break;
+      }
+    }
+
+    let progressPercent = 100; // default for Legend
+    if (currentRank.max !== Infinity) {
+      const range = currentRank.max - currentRank.min;
+      const progress = score - currentRank.min;
+      progressPercent = Math.min(100, Math.max(0, (progress / range) * 100));
+    }
+
+    return {
+      ...currentRank,
+      progressPercent
+    };
   }
 
   /**
@@ -61,10 +97,15 @@ const ScoringSystem = (() => {
     }
 
     const currentScore = getScore();
+    const prevRankInfo = getRankInfo(currentScore);
+    
     const newScore = currentScore + delta;
     saveScore(newScore);
+    
+    const newRankInfo = getRankInfo(newScore);
+    const rankUp = newRankInfo.name !== prevRankInfo.name;
 
-    return { delta, newScore };
+    return { delta, newScore, rankUp, newRankInfo };
   }
 
   /**
@@ -77,6 +118,7 @@ const ScoringSystem = (() => {
   return {
     getScore,
     saveScore,
+    getRankInfo,
     calculateWorkoutScore,
     getScoreDisplay
   };

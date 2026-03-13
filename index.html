@@ -6,6 +6,7 @@
   <title>RepSense — Train Smarter. Perfect Every Rep.</title>
   <meta name="description" content="RepSense is an AI workout coach that uses your camera to monitor exercises, count reps, analyze form, and guide your workout in real time." />
   <link rel="stylesheet" href="styles/style.css" />
+  
 </head>
 <body>
 
@@ -21,9 +22,28 @@
 
     <!-- Tagline (hidden initially) -->
     <div class="intro-tagline" id="intro-tagline">Train Smarter. Perfect Every Rep.</div>
+  </div>
 
-    <!-- Skip button with countdown -->
-    <button class="intro-skip" id="skip-intro-btn">Skip Intro <span id="skip-countdown"></span></button>
+  <!-- ============================================
+       LOGIN VIEW
+       ============================================ -->
+  <div id="login-view" class="hidden">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-rep">Rep</span><span class="brand-sense">Sense</span>
+      </div>
+      <p class="login-tagline">Train Smarter. Perfect Every Rep.</p>
+      <button class="login-google-btn" id="google-login-btn">
+        <svg viewBox="0 0 24 24" width="20" height="20">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+      <p class="login-privacy">We value your privacy. No data leaves your device.</p>
+    </div>
   </div>
 
   <!-- ============================================
@@ -60,7 +80,17 @@
             <option value="advanced">Advanced</option>
           </select>
         </div>
-        <button type="submit" class="btn-primary">Get Started</button>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profile-height">Height (cm) <span class="optional-tag">optional</span></label>
+            <input type="number" id="profile-height" placeholder="e.g. 175" min="100" max="250" />
+          </div>
+          <div class="form-group">
+            <label for="profile-weight">Weight (kg) <span class="optional-tag">optional</span></label>
+            <input type="number" id="profile-weight" placeholder="e.g. 70" min="30" max="300" />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Save Profile</button>
       </form>
     </div>
   </div>
@@ -75,33 +105,61 @@
        ============================================ -->
   <div class="profile-drawer" id="profile-drawer">
     <div class="drawer-profile-section">
-      <div class="drawer-avatar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/>
-          <path d="M20 21c0-3.3-3.6-6-8-6s-8 2.7-8 6"/>
-        </svg>
+      <div class="drawer-header-row">
+        <div class="drawer-avatar" id="drawer-avatar">
+          <img id="drawer-photo" class="drawer-photo hidden" src="" alt="Profile" />
+          <svg id="drawer-avatar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5z"/>
+            <path d="M20 21c0-3.3-3.6-6-8-6s-8 2.7-8 6"/>
+          </svg>
+          <label class="drawer-photo-upload" for="photo-upload-input" title="Upload photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </label>
+          <input type="file" id="photo-upload-input" accept="image/*" class="hidden" />
+        </div>
+
+        <div class="drawer-identity">
+          <div class="drawer-username-row">
+            <span class="drawer-username" id="drawer-username">User</span>
+            <span class="drawer-rank-badge bg-rank-gray" id="drawer-rank-badge">Beginner</span>
+          </div>
+          <div class="drawer-email" id="drawer-email">user@gmail.com</div>
+        </div>
       </div>
-      <div class="drawer-username" id="drawer-username">User</div>
-      <div class="drawer-meta">
-        <span id="drawer-age">—</span> yrs · <span id="drawer-fitness">—</span>
-      </div>
-      <div class="drawer-score-badge">
-        <span class="drawer-score-label">RepSense Score</span>
-        <span class="drawer-score-value" id="drawer-score">0</span>
+
+      <div class="drawer-stats-row">
+        <div class="drawer-stat">
+          <div class="drawer-stat-label">RepSense Score</div>
+          <div class="drawer-stat-value" id="drawer-score">0</div>
+        </div>
       </div>
     </div>
+    
     <nav class="drawer-nav">
-      <a href="#" class="drawer-nav-link active" id="drawer-nav-dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Dashboard
-      </a>
       <a href="#" class="drawer-nav-link" id="drawer-nav-history">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
         Workout History
       </a>
+      <a href="#" class="drawer-nav-link" id="drawer-nav-analytics">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Progress Analytics
+      </a>
+      <a href="#" class="drawer-nav-link disabled" id="drawer-nav-achievements" title="Coming Soon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Achievements (Soon)
+      </a>
+      <a href="#" class="drawer-nav-link" id="drawer-nav-feedback">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Feedback
+      </a>
       <a href="#" class="drawer-nav-link" id="drawer-nav-settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         Settings
+      </a>
+      <div class="drawer-nav-divider"></div>
+      <a href="#" class="drawer-nav-link drawer-nav-logout" id="drawer-nav-logout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
       </a>
     </nav>
   </div>
@@ -129,9 +187,15 @@
         <div class="insight-card-new insight-highlight-new">
           <div class="insight-card-icon">🏆</div>
           <div class="insight-card-content">
-            <div class="insight-card-label">RepSense Score</div>
-            <div class="insight-card-value" id="dash-score">0</div>
-            <div class="insight-card-sub">Keep training to improve!</div>
+            <div class="insight-card-label">Rank & Score</div>
+            <div class="insight-rank-row">
+              <span class="insight-rank-badge" id="dash-rank-badge">Beginner</span>
+              <span class="insight-card-value" id="dash-score">0</span>
+            </div>
+            <div class="rank-progress-bar small mt-2">
+              <div class="rank-progress-fill" id="dash-rank-fill" style="width: 0%;"></div>
+            </div>
+            <div class="insight-card-sub" id="dash-rank-sub">0 / 200</div>
           </div>
         </div>
         <div class="insight-card-new">
@@ -151,12 +215,27 @@
           </div>
         </div>
         <div class="insight-card-new">
-          <div class="insight-card-icon">🧭</div>
+          <div class="insight-card-icon">⚡</div>
           <div class="insight-card-content">
-            <div class="insight-card-label">Guide Trainer</div>
-            <div class="insight-card-value insight-coming-soon">Coming Soon</div>
-            <div class="insight-card-sub">Muscle-specific training guides will appear here in future updates.</div>
+            <div class="insight-card-label">Total Workouts</div>
+            <div class="insight-card-value" id="dash-workouts-total">0</div>
+            <div class="insight-card-sub" id="dash-workouts-sub">Sessions</div>
           </div>
+        </div>
+      </div>
+      
+      <!-- AI Training Insights Panel -->
+      <div class="ai-insights-panel mt-4">
+        <div class="ai-insights-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="20" height="20" class="pulse-glow"><path d="M12 2L2 7l10 5 10-5-10-5ZM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <h3 class="m-0" style="color:var(--accent); font-family:var(--font-display);">AI Training Insights</h3>
+        </div>
+        <div class="ai-insights-content">
+          <ul class="ai-insights-list" id="ai-insights-list">
+            <li>"Your squat depth improved by 18% this week."</li>
+            <li>"Push-up form accuracy increased to 91%."</li>
+            <li>"Maintain your current streak to reach Elite rank."</li>
+          </ul>
         </div>
       </div>
     </section>
@@ -177,12 +256,54 @@
     </section>
 
     <!-- Footer -->
-    <footer class="dashboard-footer">
-      <div class="footer-copy">© RepSense · All Rights Reserved</div>
-      <div class="footer-links">
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Contact</a>
+    <footer class="saas-footer">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>Product</h4>
+          <a href="#">Features</a>
+          <a href="#">Workout Tracking</a>
+          <a href="#">AI Form Detection</a>
+          <a href="#">RepSense Score System</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#">About RepSense</a>
+          <a href="#">Careers</a>
+          <a href="#">Press</a>
+          <a href="#">Contact</a>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <a href="#">Fitness Guides</a>
+          <a href="#">Blog</a>
+          <a href="#">Help Center</a>
+          <a href="#">Community</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#" id="footer-link-privacy">Privacy Policy</a>
+          <a href="#" id="footer-link-terms">Terms of Use</a>
+          <a href="#">Cookie Policy</a>
+          <a href="#">Data Security</a>
+          <a href="#" class="footer-dev-link">Developers / API (Coming Soon)</a>
+        </div>
+      </div>
+      
+      <div class="footer-social">
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+        <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></a>
+        <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+        <a href="#" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg></a>
+      </div>
+
+      <div class="footer-privacy-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Camera data is processed locally on your device using pose detection technology.<br/>No video recordings are stored or uploaded.
+      </div>
+      
+      <div class="footer-bottom">
+        <div class="footer-version">RepSense v0.1 Prototype</div>
+        <div class="footer-copy">© 2026 RepSense. All rights reserved.</div>
       </div>
     </footer>
   </div>
@@ -316,10 +437,72 @@
 
     <div class="report-footer">
       <div style="margin-bottom:16px;">
-        <span style="color:var(--text-secondary);">RepSense Score:</span>
-        <span style="font-family:var(--font-display);font-size:1.5rem;color:var(--accent);margin-left:8px;" id="report-repsense-score">0</span>
+        <span style="color:var(--text-secondary);">Final Score:</span>
+        <span style="font-family:var(--font-display);font-size:1.5rem;color:var(--accent);margin:0 8px;" id="report-repsense-score">0</span>
+        <span class="insight-rank-badge" id="report-rank-badge" style="vertical-align: middle;">Beginner</span>
       </div>
       <button class="btn-primary" style="max-width:300px;margin:0 auto;" id="report-done-btn">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- ============================================
+       LEGAL VIEWS
+       ============================================ -->
+  <div id="privacy-policy-view" class="hidden legal-view">
+    <header class="legal-header">
+      <button class="back-btn" id="privacy-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <h2>Privacy Policy</h2>
+    </header>
+    <div class="legal-content">
+      <h3>Introduction</h3>
+      <p>RepSense respects user privacy and is committed to protecting personal data.</p>
+      
+      <h3>Data Collected</h3>
+      <p>RepSense may collect:</p>
+      <ul>
+        <li>User profile information (name, age, email)</li>
+        <li>Workout session data</li>
+        <li>RepSense score analytics</li>
+      </ul>
+      
+      <h3>Camera Processing</h3>
+      <p>RepSense uses AI pose detection to analyze body movement during workouts.</p>
+      <p>All camera processing occurs locally in the user's browser.</p>
+      <p><strong>No video footage is stored, recorded, or transmitted.</strong></p>
+      
+      <h3>User Control</h3>
+      <p>Users may edit or delete their data at any time.</p>
+      
+      <h3>Security</h3>
+      <p>RepSense follows modern web security standards to protect user information.</p>
+    </div>
+  </div>
+
+  <div id="terms-of-use-view" class="hidden legal-view">
+    <header class="legal-header">
+      <button class="back-btn" id="terms-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <h2>Terms of Use</h2>
+    </header>
+    <div class="legal-content">
+      <h3>Introduction</h3>
+      <p>By using RepSense you agree to these terms.</p>
+      
+      <h3>Fitness Disclaimer</h3>
+      <p>RepSense is a fitness assistance platform and not a medical service.</p>
+      <p>Users should consult qualified professionals before beginning intensive workout routines.</p>
+      
+      <h3>User Responsibility</h3>
+      <p>Users are responsible for performing exercises safely.</p>
+      
+      <h3>Limitation of Liability</h3>
+      <p>RepSense is not responsible for injuries resulting from workouts.</p>
+      
+      <h3>Intellectual Property</h3>
+      <p>RepSense software, algorithms, and branding are protected.</p>
     </div>
   </div>
 
@@ -345,6 +528,17 @@
         <button class="btn-secondary" id="modal-cancel-btn">Cancel</button>
         <button class="btn-primary" style="width:auto;padding:12px 24px;" id="modal-save-btn">Save</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       RANK UP TOAST
+       ============================================ -->
+  <div id="rank-up-toast" class="rank-up-toast hidden">
+    <div class="toast-icon">⭐</div>
+    <div class="toast-content">
+      <div class="toast-title">Rank Up!</div>
+      <div class="toast-message">You are now <span id="toast-rank-name">Elite</span>.</div>
     </div>
   </div>
 

@@ -21,7 +21,8 @@ const PlaylistManager = (() => {
   function getAll() {
     const stored = localStorage.getItem(STORAGE_KEY);
     const custom = stored ? JSON.parse(stored) : [];
-    return [FREE_WORKOUT, ...custom];
+    // Ensure FREE_WORKOUT is always the first element and has no duplicate
+    return [FREE_WORKOUT, ...custom.filter(p => p.id !== 'free_workout')];
   }
 
   /**
@@ -137,12 +138,12 @@ const PlaylistManager = (() => {
             ${pl.isFree ? `<span class="pl-meta-dot"></span><span>Free mode</span>` : ''}
           </div>
           <div class="pl-card-footer">
-            <button class="btn-start pl-start">${PLAY_SVG} Start Workout</button>
-            <div class="pl-actions">
-              ${!pl.isFree ? '<button class="btn-icon pl-edit" title="Edit">✏</button><button class="btn-icon pl-delete" title="Delete" style="color:var(--danger)">✕</button>' : ''}
+              <button class="btn-start pl-start">${PLAY_SVG} Start Workout</button>
+              <div class="pl-actions-right">
+                ${!pl.isFree ? `<button class="btn-icon pl-edit" title="Edit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>` : ''}
+                ${!pl.isFree ? `<button class="btn-icon pl-delete" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>` : ''}
+              </div>
             </div>
-          </div>
-        </div>
       `;
 
       // Start button
