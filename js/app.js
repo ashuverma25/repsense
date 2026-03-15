@@ -261,7 +261,7 @@ const App = (() => {
 
     // Calendar & playlists
     CalendarTracker.renderCalendar();
-    PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, deletePlaylist);
+    PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, promptDeletePlaylist);
 
     // Profile drawer data
     refreshDrawer();
@@ -477,16 +477,50 @@ const App = (() => {
     }
 
     closePlaylistModal();
-    PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, deletePlaylist);
+    PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, promptDeletePlaylist);
     showToast(editingPlaylistId ? 'Playlist updated!' : 'Playlist created!');
   }
 
-  function deletePlaylist(playlist) {
-    if (confirm(`Delete "${playlist.name}"?`)) {
-      PlaylistManager.remove(playlist.id);
-      PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, deletePlaylist);
-      showToast('Playlist deleted.');
-    }
+  // =========================================
+  // DELETE PLAYLIST MODAL LOGIC
+  // =========================================
+  let playlistToDelete = null;
+
+  function promptDeletePlaylist(playlist) {
+    playlistToDelete = playlist;
+    
+    // Setup modal UI
+    document.getElementById('confirm-delete-text').textContent = `Are you sure you want to delete "${playlist.name}"? This cannot be undone.`;
+    
+    // Show modal
+    const modal = document.getElementById('confirm-delete-modal');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => modal.classList.add('visible'));
+
+    // Bind specific active listeners
+    const cancelBtn = document.getElementById('confirm-delete-cancel-btn');
+    const confirmBtn = document.getElementById('confirm-delete-confirm-btn');
+
+    // Clean up old listeners (via cloning if needed or just replace onclick)
+    cancelBtn.onclick = closeConfirmDeleteModal;
+    confirmBtn.onclick = executeDeletePlaylist;
+  }
+
+  function closeConfirmDeleteModal() {
+    playlistToDelete = null;
+    const modal = document.getElementById('confirm-delete-modal');
+    modal.classList.remove('visible');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+  }
+
+  function executeDeletePlaylist() {
+    if (!playlistToDelete) return;
+    
+    PlaylistManager.remove(playlistToDelete.id);
+    PlaylistManager.renderList(startPlaylist, openEditPlaylistModal, promptDeletePlaylist);
+    
+    closeConfirmDeleteModal();
+    showToast('Playlist deleted.');
   }
 
   // =========================================

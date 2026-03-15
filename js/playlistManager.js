@@ -135,7 +135,7 @@ const PlaylistManager = (() => {
           <div class="pl-meta">
             <span>${exerciseCount} Exercise${exerciseCount !== 1 ? 's' : ''}</span>
             ${estMinutes ? `<span class="pl-meta-dot"></span><span>~${estMinutes} min</span>` : ''}
-            ${pl.isFree ? `<span class="pl-meta-dot"></span><span>Free mode</span>` : ''}
+            ${pl.isFree ? `<span class="pl-meta-dot"></span><span>AI Guided</span>` : ''}
           </div>
           <div class="pl-card-footer">
               <button class="btn-start pl-start">${PLAY_SVG} Start Workout</button>
