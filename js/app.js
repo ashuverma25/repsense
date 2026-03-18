@@ -371,7 +371,7 @@ const App = (() => {
       e.preventDefault();
       drawer.classList.remove('open');
       overlay.classList.remove('open');
-      logoutUser();
+      handleLogout();
     });
 
     // Dummy Actions
@@ -539,13 +539,17 @@ const App = (() => {
     isWorkoutActive = true;
     freeWorkoutExercise = null;
 
+    // Synchronous voice call to unlock SpeechSynthesis inside the event handler
+    VoiceAssistant.speak('', true);
+
     showView('workout-view');
 
     // Start camera
     try {
       await CameraModule.start();
+      console.log('[App] Camera started');
     } catch (err) {
-      showToast('Camera access denied. Please allow camera permissions.');
+      showToast('Camera access required to start workout');
       showView('dashboard-view');
       return;
     }

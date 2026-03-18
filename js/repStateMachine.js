@@ -23,6 +23,7 @@ const RepStateMachine = (() => {
   function startExercise(exerciseKey) {
     currentExerciseKey = exerciseKey;
     currentExercise = ExerciseEngine.getExercise(exerciseKey);
+    console.log('[RepStateMachine] Rep counting active for', exerciseKey);
     if (!currentExercise) {
       console.error('[RepStateMachine] Unknown exercise:', exerciseKey);
       return;

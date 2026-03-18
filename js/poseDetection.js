@@ -37,23 +37,27 @@ const PoseDetectionModule = (() => {
     canvasCtx = canvas.getContext('2d');
     videoEl = video;
 
-    pose = new Pose({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
-    });
+    if (!pose) {
+      console.log('[PoseDetection] Initializing model...');
+      pose = new Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+      });
 
-    pose.setOptions({
-      modelComplexity: 1,
-      smoothLandmarks: true,
-      enableSegmentation: false,
-      smoothSegmentation: false,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5
-    });
+      pose.setOptions({
+        modelComplexity: 1,
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        smoothSegmentation: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
 
-    pose.onResults(handleResults);
+      pose.onResults(handleResults);
 
-    // Wait for model to load
-    await pose.initialize();
+      // Wait for model to load
+      await pose.initialize();
+      console.log('[PoseDetection] Model loaded successfully.');
+    }
   }
 
   /**
@@ -62,9 +66,9 @@ const PoseDetectionModule = (() => {
   function handleResults(results) {
     if (!canvasCtx || !canvasEl) return;
 
-    // Match canvas to video display size
-    canvasEl.width = canvasEl.clientWidth;
-    canvasEl.height = canvasEl.clientHeight;
+    // Match canvas to video actual size to prevent mapping issues
+    canvasEl.width = videoEl.videoWidth || canvasEl.clientWidth || 640;
+    canvasEl.height = videoEl.videoHeight || canvasEl.clientHeight || 480;
 
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -135,7 +139,7 @@ const PoseDetectionModule = (() => {
 
     for (const idx of importantIndices) {
       const lm = landmarks[idx];
-      if (lm.visibility > 0.3) {
+      if (lm && lm.visibility > 0.3) {
         canvasCtx.beginPath();
         canvasCtx.arc(
           lm.x * canvasEl.width,
@@ -144,6 +148,7 @@ const PoseDetectionModule = (() => {
         );
         canvasCtx.fillStyle = '#00ff88';
         canvasCtx.fill();
+        canvasCtx.closePath();
       }
     }
   }
@@ -188,6 +193,7 @@ const PoseDetectionModule = (() => {
   function startLoop() {
     if (isRunning) return;
     isRunning = true;
+    console.log('[PoseDetection] Detection loop running');
 
     async function detect() {
       if (!isRunning || !videoEl || videoEl.readyState < 2) {
