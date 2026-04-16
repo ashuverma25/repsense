@@ -1,6 +1,7 @@
 /**
  * repStateMachine.js — State Machine Rep Counter
  * Manages exercise state transitions, rep counting, and cooldown.
+ * Supports form-gated rep counting — only valid form counts.
  */
 const RepStateMachine = (() => {
   let currentExerciseKey = null;
@@ -13,6 +14,7 @@ const RepStateMachine = (() => {
   let isPlankHolding = false;
   let onRepCallback = null;
   let onStateChangeCallback = null;
+  let lastFormCorrect = true;
 
   const COOLDOWN_MS = 500; // 500ms cooldown between reps
 
@@ -33,6 +35,7 @@ const RepStateMachine = (() => {
     lastRepTime = 0;
     plankTimer = 0;
     isPlankHolding = false;
+    lastFormCorrect = true;
 
     // Set initial state
     if (currentExercise.type === 'timer') {
@@ -65,7 +68,7 @@ const RepStateMachine = (() => {
   /**
    * Process a frame of landmarks.
    * @param {Array} landmarks - MediaPipe pose landmarks
-   * @returns {Object} { state, repCount, depth, formIssues, angles }
+   * @returns {Object} { state, repCount, depth, formIssues, angles, isFormCorrect }
    */
   function processFrame(landmarks) {
     if (!currentExercise || !landmarks) return null;
@@ -77,6 +80,9 @@ const RepStateMachine = (() => {
       const holding = currentExercise.isHolding(angles);
       isPlankHolding = holding;
       const formIssues = currentExercise.formChecks ? currentExercise.formChecks(landmarks, angles) : [];
+      const isFormCorrect = formIssues.length === 0;
+      lastFormCorrect = isFormCorrect;
+
       return {
         state: holding ? 'HOLDING' : 'NOT_ALIGNED',
         repCount: 0,
@@ -84,7 +90,8 @@ const RepStateMachine = (() => {
         depth: holding ? 100 : 0,
         formIssues,
         angles,
-        isTimer: true
+        isTimer: true,
+        isFormCorrect
       };
     }
 
@@ -92,6 +99,8 @@ const RepStateMachine = (() => {
     const newState = currentExercise.getState(angles, currentState);
     const depth = currentExercise.getDepth(angles);
     const formIssues = currentExercise.formChecks ? currentExercise.formChecks(landmarks, angles) : [];
+    const isFormCorrect = formIssues.length === 0;
+    lastFormCorrect = isFormCorrect;
 
     if (newState !== currentState) {
       const oldState = currentState;
@@ -104,7 +113,8 @@ const RepStateMachine = (() => {
       // Check if rep completed
       if (newState === 'COMPLETED') {
         const now = Date.now();
-        if (now - lastRepTime >= COOLDOWN_MS) {
+        if (now - lastRepTime >= COOLDOWN_MS && isFormCorrect) {
+          // Form-gated: only count if form is correct at completion
           repCount++;
           lastRepTime = now;
           currentState = currentExercise.states[0]; // Reset to initial state
@@ -113,7 +123,7 @@ const RepStateMachine = (() => {
             onRepCallback(repCount, depth, formIssues);
           }
         } else {
-          // Cooldown — reset to initial state without counting
+          // Bad form or cooldown — reset without counting
           currentState = currentExercise.states[0];
         }
       }
@@ -125,7 +135,8 @@ const RepStateMachine = (() => {
       depth,
       formIssues,
       angles,
-      isTimer: false
+      isTimer: false,
+      isFormCorrect
     };
   }
 
@@ -158,6 +169,10 @@ const RepStateMachine = (() => {
     return currentExerciseKey;
   }
 
+  function isLastFormCorrect() {
+    return lastFormCorrect;
+  }
+
   function setOnRep(callback) {
     onRepCallback = callback;
   }
@@ -174,6 +189,7 @@ const RepStateMachine = (() => {
     getState,
     getPlankTime,
     getCurrentExerciseKey,
+    isLastFormCorrect,
     setOnRep,
     setOnStateChange
   };

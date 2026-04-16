@@ -2,6 +2,7 @@
  * poseDetection.js — MediaPipe Pose Wrapper
  * Loads MediaPipe Pose, runs detection, draws skeleton overlay,
  * checks body visibility, and exposes landmarks.
+ * Supports model preloading and form-aware rendering.
  */
 const PoseDetectionModule = (() => {
   let pose = null;
@@ -13,6 +14,13 @@ const PoseDetectionModule = (() => {
   let animFrameId = null;
   let onResultsCallback = null;
   let bodyVisible = false;
+  let modelReady = false;
+  let preloadPromise = null;
+
+  // Form state for rendering
+  let formCorrect = true;
+  let incorrectJointSet = new Set();
+  let feedbackText = '';
 
   // Landmark indices for visibility check
   const VISIBILITY_LANDMARKS = {
@@ -27,18 +35,29 @@ const PoseDetectionModule = (() => {
     rightAnkle: 28
   };
 
-  /**
-   * Initialize MediaPipe Pose.
-   * @param {HTMLCanvasElement} canvas
-   * @param {HTMLVideoElement} video
-   */
-  async function init(canvas, video) {
-    canvasEl = canvas;
-    canvasCtx = canvas.getContext('2d');
-    videoEl = video;
+  // Important body joint indices for drawing
+  const IMPORTANT_JOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
 
-    if (!pose) {
-      console.log('[PoseDetection] Initializing model...');
+  // Skeleton connections
+  const CONNECTIONS = [
+    [11, 12], // shoulders
+    [11, 13], [13, 15], // left arm
+    [12, 14], [14, 16], // right arm
+    [11, 23], [12, 24], // torso
+    [23, 24], // hips
+    [23, 25], [25, 27], // left leg
+    [24, 26], [26, 28], // right leg
+  ];
+
+  /**
+   * Preload the MediaPipe Pose model independently of canvas/video.
+   * Called on DOMContentLoaded for instant readiness.
+   */
+  async function preload() {
+    if (pose || preloadPromise) return preloadPromise;
+
+    preloadPromise = (async () => {
+      console.log('[PoseDetection] Preloading model...');
       pose = new Pose({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
       });
@@ -56,7 +75,26 @@ const PoseDetectionModule = (() => {
 
       // Wait for model to load
       await pose.initialize();
-      console.log('[PoseDetection] Model loaded successfully.');
+      modelReady = true;
+      console.log('[PoseDetection] Model preloaded successfully.');
+    })();
+
+    return preloadPromise;
+  }
+
+  /**
+   * Initialize canvas and video elements (model should already be preloaded).
+   * @param {HTMLCanvasElement} canvas
+   * @param {HTMLVideoElement} video
+   */
+  async function init(canvas, video) {
+    canvasEl = canvas;
+    canvasCtx = canvas.getContext('2d');
+    videoEl = video;
+
+    // If model wasn't preloaded yet, load it now (fallback)
+    if (!modelReady) {
+      await preload();
     }
   }
 
@@ -81,11 +119,17 @@ const PoseDetectionModule = (() => {
       latestLandmarks = results.poseLandmarks;
       bodyVisible = checkBodyVisibility(results.poseLandmarks);
 
+      // Draw soft overlay based on form state
+      drawFormOverlay();
+
       // Draw connections (skeleton lines)
       drawConnections(results.poseLandmarks);
 
-      // Draw landmarks (joint dots)
+      // Draw landmarks (joint dots) with form-aware coloring
       drawLandmarks(results.poseLandmarks);
+
+      // Draw feedback text
+      drawFeedbackText();
 
       // Call external callback
       if (onResultsCallback) {
@@ -103,26 +147,37 @@ const PoseDetectionModule = (() => {
   }
 
   /**
-   * Draw skeleton connections.
+   * Draw soft green/red form overlay on canvas.
+   */
+  function drawFormOverlay() {
+    if (!feedbackText) return; // No active exercise
+
+    const overlayColor = formCorrect
+      ? 'rgba(0, 255, 136, 0.04)'
+      : 'rgba(255, 68, 68, 0.06)';
+
+    canvasCtx.fillStyle = overlayColor;
+    canvasCtx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+  }
+
+  /**
+   * Draw skeleton connections with form-aware coloring.
    */
   function drawConnections(landmarks) {
-    const connections = [
-      [11, 12], // shoulders
-      [11, 13], [13, 15], // left arm
-      [12, 14], [14, 16], // right arm
-      [11, 23], [12, 24], // torso
-      [23, 24], // hips
-      [23, 25], [25, 27], // left leg
-      [24, 26], [26, 28], // right leg
-    ];
+    const baseColor = formCorrect
+      ? 'rgba(0, 255, 136, 0.5)'
+      : 'rgba(0, 255, 136, 0.3)';
 
-    canvasCtx.strokeStyle = 'rgba(0, 255, 136, 0.6)';
     canvasCtx.lineWidth = 2;
 
-    for (const [i, j] of connections) {
+    for (const [i, j] of CONNECTIONS) {
       const a = landmarks[i];
       const b = landmarks[j];
       if (a.visibility > 0.3 && b.visibility > 0.3) {
+        // Color connection red if either joint is incorrect
+        const isIncorrect = incorrectJointSet.has(i) || incorrectJointSet.has(j);
+        canvasCtx.strokeStyle = isIncorrect ? 'rgba(255, 68, 68, 0.6)' : baseColor;
+
         canvasCtx.beginPath();
         canvasCtx.moveTo(a.x * canvasEl.width, a.y * canvasEl.height);
         canvasCtx.lineTo(b.x * canvasEl.width, b.y * canvasEl.height);
@@ -132,21 +187,39 @@ const PoseDetectionModule = (() => {
   }
 
   /**
-   * Draw landmark dots.
+   * Draw landmark dots with form-aware coloring.
+   * Correct: bright green | Incorrect specific joints: red | Default: neutral green
    */
   function drawLandmarks(landmarks) {
-    const importantIndices = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
-
-    for (const idx of importantIndices) {
+    for (const idx of IMPORTANT_JOINTS) {
       const lm = landmarks[idx];
       if (lm && lm.visibility > 0.3) {
+        const isIncorrect = incorrectJointSet.has(idx);
+        const dotColor = isIncorrect
+          ? '#ff4444'
+          : (formCorrect ? '#00ff88' : '#66bb6a');
+        const dotRadius = isIncorrect ? 7 : 5;
+
+        // Glow effect for incorrect joints
+        if (isIncorrect) {
+          canvasCtx.beginPath();
+          canvasCtx.arc(
+            lm.x * canvasEl.width,
+            lm.y * canvasEl.height,
+            12, 0, 2 * Math.PI
+          );
+          canvasCtx.fillStyle = 'rgba(255, 68, 68, 0.25)';
+          canvasCtx.fill();
+          canvasCtx.closePath();
+        }
+
         canvasCtx.beginPath();
         canvasCtx.arc(
           lm.x * canvasEl.width,
           lm.y * canvasEl.height,
-          5, 0, 2 * Math.PI
+          dotRadius, 0, 2 * Math.PI
         );
-        canvasCtx.fillStyle = '#00ff88';
+        canvasCtx.fillStyle = dotColor;
         canvasCtx.fill();
         canvasCtx.closePath();
       }
@@ -154,23 +227,42 @@ const PoseDetectionModule = (() => {
   }
 
   /**
-   * Mark a joint as incorrect (red dot).
+   * Draw "Good Rep" or "Fix Form" feedback text on canvas.
    */
-  function markJointIncorrect(landmarks, jointIdx) {
-    if (!canvasCtx || !canvasEl || !landmarks[jointIdx]) return;
-    const lm = landmarks[jointIdx];
-    canvasCtx.save();
-    canvasCtx.translate(canvasEl.width, 0);
-    canvasCtx.scale(-1, 1);
-    canvasCtx.beginPath();
-    canvasCtx.arc(
-      lm.x * canvasEl.width,
-      lm.y * canvasEl.height,
-      8, 0, 2 * Math.PI
-    );
-    canvasCtx.fillStyle = '#ff4444';
-    canvasCtx.fill();
-    canvasCtx.restore();
+  function drawFeedbackText() {
+    if (!feedbackText) return;
+
+    const text = formCorrect ? 'Good Rep ✓' : 'Fix Form ✗';
+    const textColor = formCorrect
+      ? 'rgba(0, 255, 136, 0.8)'
+      : 'rgba(255, 68, 68, 0.8)';
+
+    canvasCtx.font = 'bold 18px "Inter", "Segoe UI", sans-serif';
+    canvasCtx.fillStyle = textColor;
+    canvasCtx.textAlign = 'center';
+    canvasCtx.fillText(text, canvasEl.width / 2, 36);
+    canvasCtx.textAlign = 'start'; // Reset
+  }
+
+  /**
+   * Set the current form state for rendering.
+   * Called by the app controller each frame.
+   * @param {boolean} isCorrect - Whether posture is correct
+   * @param {number[]} badJoints - Array of incorrect joint indices
+   */
+  function setFormState(isCorrect, badJoints = []) {
+    formCorrect = isCorrect;
+    incorrectJointSet = new Set(badJoints);
+    feedbackText = 'active'; // Non-empty signals active exercise
+  }
+
+  /**
+   * Clear form state (when exercise ends).
+   */
+  function clearFormState() {
+    formCorrect = true;
+    incorrectJointSet = new Set();
+    feedbackText = '';
   }
 
   /**
@@ -221,6 +313,7 @@ const PoseDetectionModule = (() => {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
     }
+    clearFormState();
   }
 
   function getLandmarks() {
@@ -231,17 +324,24 @@ const PoseDetectionModule = (() => {
     return bodyVisible;
   }
 
+  function isModelReady() {
+    return modelReady;
+  }
+
   function setOnResults(callback) {
     onResultsCallback = callback;
   }
 
   return {
+    preload,
     init,
     startLoop,
     stopLoop,
     getLandmarks,
     isBodyVisible,
+    isModelReady,
     setOnResults,
-    markJointIncorrect
+    setFormState,
+    clearFormState
   };
 })();

@@ -2,6 +2,7 @@
  * voiceAssistant.js — Voice Interaction
  * Uses Web Speech API for speech recognition and SpeechSynthesis for TTS.
  * Provides Siri-like waveform animation and message queue.
+ * Includes cooldown system and form-specific feedback phrases.
  */
 const VoiceAssistant = (() => {
   let synthesis = null;
@@ -14,12 +15,27 @@ const VoiceAssistant = (() => {
   let waveformBars = [];
   let waveformInterval = null;
 
+  // Cooldown tracking
+  let lastSpeakTime = 0;
+  const DEFAULT_COOLDOWN_MS = 1500; // 1.5s cooldown
+
   // Recognized commands
   const COMMANDS = {
     'pause': ['buddy pause', 'pause workout', 'pause'],
     'skip': ['buddy skip', 'skip exercise', 'skip', 'next'],
     'stop': ['buddy stop', 'stop workout', 'stop'],
     'repeat': ['buddy repeat', 'repeat exercise', 'repeat'],
+  };
+
+  // Form feedback phrases
+  const CORRECT_PHRASES = ['Good rep', 'Nice', 'Perfect', 'Great form', 'Keep it up'];
+  const INCORRECT_PHRASES = {
+    default: ['Fix your form', 'Watch your form', 'Adjust your posture'],
+    back: ['Keep your back straight', 'Straighten your back'],
+    knees: ['Keep knees aligned over ankles', 'Watch your knees'],
+    arms: ['Adjust your arms', 'Keep elbows close'],
+    depth: ['Go lower', 'Go deeper for full range'],
+    alignment: ['Keep hips aligned', 'Align your body'],
   };
 
   /**
@@ -126,6 +142,58 @@ const VoiceAssistant = (() => {
     messageQueue.push(text);
     addMessageToUI(text);
     processQueue();
+  }
+
+  /**
+   * Speak with cooldown — prevents voice spam.
+   * Only speaks if enough time has elapsed since last speak.
+   * @param {string} text
+   * @param {number} cooldownMs - Cooldown in ms (default 1500)
+   * @returns {boolean} - Whether the message was spoken
+   */
+  function speakWithCooldown(text, cooldownMs = DEFAULT_COOLDOWN_MS) {
+    const now = Date.now();
+    if (now - lastSpeakTime < cooldownMs) {
+      return false;
+    }
+    lastSpeakTime = now;
+    speak(text);
+    return true;
+  }
+
+  /**
+   * Get a random correct form feedback phrase.
+   */
+  function getCorrectPhrase() {
+    return CORRECT_PHRASES[Math.floor(Math.random() * CORRECT_PHRASES.length)];
+  }
+
+  /**
+   * Get a contextual incorrect form feedback phrase.
+   * @param {string} issueMessage - The form issue message to match against
+   */
+  function getIncorrectPhrase(issueMessage = '') {
+    const msg = issueMessage.toLowerCase();
+    if (msg.includes('back') || msg.includes('straight')) {
+      return pickRandom(INCORRECT_PHRASES.back);
+    }
+    if (msg.includes('knee') || msg.includes('ankle')) {
+      return pickRandom(INCORRECT_PHRASES.knees);
+    }
+    if (msg.includes('arm') || msg.includes('elbow')) {
+      return pickRandom(INCORRECT_PHRASES.arms);
+    }
+    if (msg.includes('lower') || msg.includes('deep') || msg.includes('range')) {
+      return pickRandom(INCORRECT_PHRASES.depth);
+    }
+    if (msg.includes('hip') || msg.includes('align')) {
+      return pickRandom(INCORRECT_PHRASES.alignment);
+    }
+    return pickRandom(INCORRECT_PHRASES.default);
+  }
+
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
   }
 
   /**
@@ -250,6 +318,9 @@ const VoiceAssistant = (() => {
   return {
     init,
     speak,
+    speakWithCooldown,
+    getCorrectPhrase,
+    getIncorrectPhrase,
     startListening,
     stopListening,
     stop,

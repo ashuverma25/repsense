@@ -23,6 +23,11 @@ const App = (() => {
   let isWorkoutActive = false;
   let freeWorkoutExercise = null; // for free workout mode
 
+  // Real-time form feedback state
+  let lastFormCorrect = true;      // Tracks previous frame's form state
+  let lastVoiceTime = 0;           // Cooldown for voice feedback
+  const VOICE_COOLDOWN_MS = 1500;  // 1.5s voice cooldown
+
   // =========================================
   // VIEW ROUTING
   // =========================================
@@ -89,6 +94,14 @@ const App = (() => {
 
     // Initialize camera
     CameraModule.init(document.getElementById('camera-video'));
+
+    // *** PRELOAD POSE DETECTION MODEL ON APP BOOT ***
+    // This ensures the model is ready before user clicks Start Workout
+    PoseDetectionModule.preload().then(() => {
+      console.log('[App] Pose model preloaded and ready');
+    }).catch(err => {
+      console.warn('[App] Pose model preload failed, will retry on workout start:', err);
+    });
 
     // Initialize profile drawer
     initProfileDrawer();
@@ -298,10 +311,6 @@ const App = (() => {
       rankBadgeEl.textContent = rankInfo.name;
       rankBadgeEl.className = `drawer-rank-badge bg-rank-${rankInfo.color}`;
     }
-    // The original code had rankFillEl and rankSubEl, which are not in the new instruction.
-    // Assuming these are intentionally removed or handled differently by the new rankBadgeEl.
-    // If they were meant to be kept, the instruction was incomplete.
-    // For now, I will remove them as per the provided diff.
 
     if (photoEl && svgEl) {
       if (profile.photoBase64) {
@@ -524,6 +533,26 @@ const App = (() => {
   }
 
   // =========================================
+  // LOADING OVERLAY — Workout Startup
+  // =========================================
+  function showLoadingOverlay(text) {
+    const overlay = document.getElementById('workout-loading-overlay');
+    const textEl = document.getElementById('loading-text');
+    if (overlay) overlay.classList.remove('hidden');
+    if (textEl) textEl.textContent = text;
+  }
+
+  function updateLoadingText(text) {
+    const textEl = document.getElementById('loading-text');
+    if (textEl) textEl.textContent = text;
+  }
+
+  function hideLoadingOverlay() {
+    const overlay = document.getElementById('workout-loading-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  // =========================================
   // WORKOUT FLOW
   // =========================================
 
@@ -538,23 +567,31 @@ const App = (() => {
     workoutStartTime = Date.now();
     isWorkoutActive = true;
     freeWorkoutExercise = null;
+    lastFormCorrect = true;
+    lastVoiceTime = 0;
 
     // Synchronous voice call to unlock SpeechSynthesis inside the event handler
     VoiceAssistant.speak('', true);
 
     showView('workout-view');
 
-    // Start camera
+    // Show loading overlay
+    showLoadingOverlay('Initializing AI Trainer...');
+
+    // Step 1: Start camera
     try {
+      updateLoadingText('Preparing camera...');
       await CameraModule.start();
       console.log('[App] Camera started');
     } catch (err) {
+      hideLoadingOverlay();
       showToast('Camera access required to start workout');
       showView('dashboard-view');
       return;
     }
 
-    // Init pose detection
+    // Step 2: Attach pose detection (model already preloaded)
+    updateLoadingText('Loading pose detection...');
     await PoseDetectionModule.init(
       document.getElementById('pose-canvas'),
       document.getElementById('camera-video')
@@ -562,6 +599,9 @@ const App = (() => {
 
     PoseDetectionModule.setOnResults(handlePoseResults);
     PoseDetectionModule.startLoop();
+
+    // Hide loading overlay — smooth transition
+    hideLoadingOverlay();
 
     // Start voice
     VoiceAssistant.clearMessages();
@@ -617,6 +657,10 @@ const App = (() => {
       plankTime: 0,
       startTime: Date.now()
     };
+
+    // Reset form feedback state
+    lastFormCorrect = true;
+    PoseDetectionModule.clearFormState();
 
     // Show exercise preview
     await showExercisePreview(exercise, exerciseKey);
@@ -772,7 +816,7 @@ const App = (() => {
   }
 
   // =========================================
-  // POSE RESULTS HANDLER
+  // POSE RESULTS HANDLER — Real-Time Feedback
   // =========================================
   function handlePoseResults(landmarks, bodyVisible) {
     if (!isWorkoutActive || workoutPaused) return;
@@ -790,6 +834,36 @@ const App = (() => {
     const result = RepStateMachine.processFrame(landmarks);
     if (!result) return;
 
+    // Extract incorrect joint indices from form issues
+    const badJoints = [];
+    if (result.formIssues.length > 0) {
+      for (const issue of result.formIssues) {
+        if (issue.joints) {
+          badJoints.push(...issue.joints);
+        }
+      }
+    }
+
+    // *** REAL-TIME FORM FEEDBACK ***
+    // Update pose detection rendering state each frame
+    PoseDetectionModule.setFormState(result.isFormCorrect, badJoints);
+
+    // Voice feedback on state change (correct ↔ incorrect) with cooldown
+    const formChanged = result.isFormCorrect !== lastFormCorrect;
+    if (formChanged) {
+      const now = Date.now();
+      if (now - lastVoiceTime >= VOICE_COOLDOWN_MS) {
+        if (result.isFormCorrect) {
+          VoiceAssistant.speakWithCooldown(VoiceAssistant.getCorrectPhrase(), VOICE_COOLDOWN_MS);
+        } else {
+          const issueMsg = result.formIssues.length > 0 ? result.formIssues[0].message : '';
+          VoiceAssistant.speakWithCooldown(VoiceAssistant.getIncorrectPhrase(issueMsg), VOICE_COOLDOWN_MS);
+        }
+        lastVoiceTime = now;
+      }
+      lastFormCorrect = result.isFormCorrect;
+    }
+
     // Update metrics
     if (result.isTimer) {
       // Plank mode
@@ -805,25 +879,11 @@ const App = (() => {
       // Form scoring for plank
       const score = FormAnalyzer.scorePlankFrame(result.angles.bodyLine);
       updateFormBar(score);
-
-      // Red joint highlight if misaligned
-      if (result.formIssues.length > 0) {
-        for (const issue of result.formIssues) {
-          PoseDetectionModule.markJointIncorrect(landmarks, issue.joint);
-        }
-      }
     } else {
       // Rep exercises
       document.getElementById('metric-reps').textContent = result.repCount;
       document.getElementById('metric-depth').textContent = result.depth + '%';
       document.getElementById('workout-exercise-status').textContent = result.state;
-
-      // Mark incorrect joints
-      if (result.formIssues.length > 0) {
-        for (const issue of result.formIssues) {
-          PoseDetectionModule.markJointIncorrect(landmarks, issue.joint);
-        }
-      }
     }
   }
 
@@ -845,15 +905,15 @@ const App = (() => {
     // Update form bar
     updateFormBar(scoreResult.avgScore);
 
-    // Voice feedback
+    // Voice feedback with cooldown
     if (scoreResult.repScore >= 80) {
       if (repCount % 5 === 0) {
-        VoiceAssistant.speak(`${repCount} reps. ${scoreResult.feedback}`);
+        VoiceAssistant.speakWithCooldown(`${repCount} reps. ${scoreResult.feedback}`, 800);
       } else {
-        VoiceAssistant.speak(`${repCount}`);
+        VoiceAssistant.speakWithCooldown(`${repCount}`, 800);
       }
     } else {
-      VoiceAssistant.speak(scoreResult.feedback);
+      VoiceAssistant.speakWithCooldown(scoreResult.feedback, VOICE_COOLDOWN_MS);
     }
 
     // Check if target reached
@@ -923,6 +983,7 @@ const App = (() => {
 
   function finishCurrentExercise() {
     RepStateMachine.stopExercise();
+    PoseDetectionModule.clearFormState();
     if (exerciseTimer) {
       clearInterval(exerciseTimer);
       exerciseTimer = null;
@@ -1055,7 +1116,7 @@ const App = (() => {
     showView('report-view');
     document.getElementById('report-total-reps').textContent = totalReps;
     document.getElementById('report-form-score').textContent = formScore + '%';
-    document.getElementById('report-duration').textContent = formatTime(Math.floor(durationMs / 1000)); // Changed formatDuration to formatTime
+    document.getElementById('report-duration').textContent = formatTime(Math.floor(durationMs / 1000));
     document.getElementById('report-repsense-score').textContent = finalScore;
     
     const reportRankBadge = document.getElementById('report-rank-badge');
@@ -1064,7 +1125,7 @@ const App = (() => {
       reportRankBadge.className = `insight-rank-badge bg-rank-${newRankInfo.color}`;
     }
 
-    const listEl = document.getElementById('report-exercise-list'); // Corrected variable name from 'list' to 'listEl'
+    const listEl = document.getElementById('report-exercise-list');
     listEl.innerHTML = '';
     for (const ex of exerciseResults) {
       const item = document.createElement('div');
